@@ -2,6 +2,7 @@ import getpass
 import socket
 import psutil
 import re
+import subprocess
 
 class InvalidIPError(Exception):
     """IP is invalid."""
@@ -57,13 +58,25 @@ def configure_interface(command):
         if not(ip_is_valid(ip)):
             raise InvalidIPError("Invalid IP address")
 
-        print(f"Configuring interface {interface} with IP {ip}")
+        result = subprocess.run(
+            ["sudo", "ip", "addr", "add", ip, "dev", interface],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print(f"Success configured {ip} on {interface}")
+        else:
+            print(f"Error configuring IP: {result.stderr.strip()}")
     
     except InvalidIPError:
         print("Invalid IP address.")
 
     except ValueError:
         print("Invalid command format. Use: configure <interface-name> ip <ip-address/mask>")
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
     
 
 
@@ -88,7 +101,12 @@ def available_commands():
     print("\nAvailable commands:")
     print("1. Show interfaces")
     print("2. Configure <interface-name> ip <ip-address/mask>")
-    print("3. Exit")
+    print("3. Logout")
+    print("4. Exit")
+
+def parse_command(command):
+    parts = command.strip().split()
+    return parts if parts else []
 
 def show_system_menu():
     print("\n##### Welcome to Config Linux Network System #####")
@@ -96,19 +114,26 @@ def show_system_menu():
 
     while True:
         command = input("> ").strip()
+        parts = parse_command(command)
+
         if command.lower() == "show interfaces" or command == "1":
             show_interfaces()
-        elif command.startswith("configure") or command == "2":
+        elif command == "2" or (len(parts) == 4 and parts[0] != "configure" or parts[2] != "ip"):
+            print("Invalid command format. Use: configure <interface-name> ip <ip-address/mask>")
+        elif len(parts) == 4 and parts[0] == "configure" and parts[2] == "ip":
             configure_interface(command)
-        elif command.lower() == "exit" or command == "3":
+        elif command.lower() == "logout" or command == "3":
+            print("Logout successful!")
+            login()
+        elif command.lower() == "exit" or command == "4":
             print("Exiting the system.")
-            break    
+            break
         else:
             print("Unknown command! try the commands below.")
             print()
             available_commands()
 
-def main():
+def login(): 
     filepath = "logins.txt"
 
     username = input("Login: ")
@@ -117,7 +142,10 @@ def main():
     if verify_login(username, password, filepath):
         show_system_menu()
     else:
-        print("Usuário ou senha incorretos. Tente novamente.")
+        print("Incorrect login credentials, please try again!")    
+
+def main():
+    login()
 
 if __name__ == "__main__":
     main()
