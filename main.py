@@ -4,18 +4,18 @@ import psutil
 import re
 import subprocess
 
-class InvalidIPError(Exception):
-    """IP is invalid."""
-    pass
-
 def show_interfaces():
     interfaces = psutil.net_if_addrs()
 
-    print(f"{"Interface":<12} {"IP address":<16} {"MAC":<18} {"MTU":<6} {"State":<6}")
+    if not interfaces:
+        print("No network interfaces available.")
+        return
+    
+    print(f"\n{"Interface":<12} {"IP address":<16} {"MAC":<18} {"MTU":<6} {"State":<6}")
     print("-" * 61)
 
-    for interface, addrs in interfaces.items():        
-        mac = "Don't have MAC"
+    for interface, addrs in sorted(interfaces.items()):        
+        mac = "00:00:00:00:00:00"
         ipv4s = []
 
         for addr in addrs:
@@ -26,9 +26,9 @@ def show_interfaces():
 
         stats = psutil.net_if_stats().get(interface, None)
 
-        mtu = stats.mtu if stats else "Don't have MTU"
+        mtu = stats.mtu if stats.mtu > 0 else "N/A"
 
-        state = "UP" if stats and stats.isup else "DOWN" if stats else "UNKNOWN"
+        state = "UP" if stats and stats.isup else "DOWN" if stats else "N/A"
 
         if ipv4s:
             print(f"{interface:<12} {ipv4s[0]:<16} {mac:<18} {mtu:<6} {state:<6}")
@@ -55,8 +55,13 @@ def configure_interface(command):
     try:
         _, interface, _, ip = command.split()
 
+        available_interfaces = list(psutil.net_if_addrs().keys())
+
+        if not (interface in available_interfaces):
+            raise ValueError(f"The interface '{interface}' doesn't exist.")
+
         if not(ip_is_valid(ip)):
-            raise InvalidIPError("Invalid IP address")
+            raise ValueError("Invalid IP address.")
 
         result = subprocess.run(
             ["sudo", "ip", "addr", "add", ip, "dev", interface],
@@ -65,37 +70,29 @@ def configure_interface(command):
         )
 
         if result.returncode == 0:
-            print(f"Success configured {ip} on {interface}")
+            print(f"Success configured {ip} on {interface}!")
         else:
             print(f"Error configuring IP: {result.stderr.strip()}")
-    
-    except InvalidIPError:
-        print("Invalid IP address.")
 
-    except ValueError:
-        print("Invalid command format. Use: configure <interface-name> ip <ip-address/mask>")
+    except ValueError as ve:
+        print(ve)
 
     except Exception as e:
         print(f"Unexpected error: {e}")
-    
 
+def verify_login(username, password, filepath):
+    password = password+"\n"
 
-def verify_login(userame, password, filepath):
-    try:
-        password = password+"\n"
+    with open(filepath, "r") as file:
 
-        with open(filepath, "r") as file:
+        lines = file.readlines()
+        
+        for line in lines:
+            fields = line.split(",")
 
-            lines = file.readlines()
-            
-            for line in lines:
-
-                fields = line.split(",")
-
-                if fields[0] == userame and fields[1] == password:
-                    return True
-    except Exception:
-        print(Exception)                
+            if fields[0] == username and fields[1] == password:
+                return True
+    return False
 
 def available_commands():
     print("\nAvailable commands:")
@@ -112,25 +109,28 @@ def show_system_menu():
     print("\n##### Welcome to Config Linux Network System #####")
     available_commands()
 
+    
     while True:
         command = input("> ").strip()
         parts = parse_command(command)
 
         if command.lower() == "show interfaces" or command == "1":
             show_interfaces()
-        elif command == "2" or (len(parts) == 4 and parts[0] != "configure" or parts[2] != "ip"):
+        elif command == "2" or (len(parts) == 4 and (parts[0] != "configure" or parts[2] != "ip")):
             print("Invalid command format. Use: configure <interface-name> ip <ip-address/mask>")
         elif len(parts) == 4 and parts[0] == "configure" and parts[2] == "ip":
             configure_interface(command)
         elif command.lower() == "logout" or command == "3":
-            print("Logout successful!")
+            print("\nLogout successful!\n")
             login()
         elif command.lower() == "exit" or command == "4":
             print("Exiting the system.")
             break
+        elif len(command) == 0:
+            print("\nNo command was typed, please type a command.")
+            available_commands()
         else:
-            print("Unknown command! try the commands below.")
-            print()
+            print("\nUnknown command! try the commands below.")
             available_commands()
 
 def login(): 
@@ -141,11 +141,19 @@ def login():
 
     if verify_login(username, password, filepath):
         show_system_menu()
+    elif len(username) == 0 or len(password) == 0:
+        print("\nLogin and password cannot be empty!\n")
+        login()
     else:
-        print("Incorrect login credentials, please try again!")    
+        print("\nIncorrect login credentials, please try again!\n")
+        login() 
 
 def main():
-    login()
+    try:
+        login()
+    except KeyboardInterrupt:
+                print("\nProgram interrupted by user. Exiting the system.")
+
 
 if __name__ == "__main__":
     main()
