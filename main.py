@@ -105,10 +105,15 @@ def parse_command(command):
     parts = command.strip().split()
     return parts if parts else []
 
+def is_valid_command_configure(parts):
+    return len(parts) == 4 and parts[0].lower() == "configure" and parts[2].lower() == "ip"
+
+def is_invalid_command_configure(parts):
+    return (len(parts) == 4 and (parts[0].lower() != "configure" or parts[2].lower() != "ip"))
+
 def show_system_menu():
     print("\n##### Welcome to Config Linux Network System #####")
     available_commands()
-
     
     while True:
         command = input("> ").strip()
@@ -116,9 +121,9 @@ def show_system_menu():
 
         if command.lower() == "show interfaces" or command == "1":
             show_interfaces()
-        elif command == "2" or (len(parts) == 4 and (parts[0] != "configure" or parts[2] != "ip")):
+        elif command == "2" or is_invalid_command_configure(parts):
             print("Invalid command format. Use: configure <interface-name> ip <ip-address/mask>")
-        elif len(parts) == 4 and parts[0] == "configure" and parts[2] == "ip":
+        elif is_valid_command_configure(parts):
             configure_interface(command)
         elif command.lower() == "logout" or command == "3":
             print("\nLogout successful!\n")
@@ -153,7 +158,6 @@ def main():
         login()
     except KeyboardInterrupt:
                 print("\nProgram interrupted by user. Exiting the system.")
-
 
 if __name__ == "__main__":
     main()

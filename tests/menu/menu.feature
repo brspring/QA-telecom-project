@@ -12,6 +12,11 @@ Feature: Main menu
         Then the system should display the message:
             "No command was typed, please type a command."
 
+    Scenario: User enters a valid command with mixed case letters
+        Given the user is logged into the system
+        When the user enters a command using mixed case letters "ShOw InTeRfAcEs"
+        Then the system should interpret the command normally
+        
     Scenario: User logout of your account
         Given the user is logged into the system
         When the user enters "logout" or the number 3
