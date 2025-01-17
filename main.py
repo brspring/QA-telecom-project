@@ -115,7 +115,8 @@ def show_system_menu():
     print("\n##### Welcome to Config Linux Network System #####")
     available_commands()
     
-    while True:
+    global sys_running
+    while sys_running:
         command = input("> ").strip()
         parts = parse_command(command)
 
@@ -127,9 +128,10 @@ def show_system_menu():
             configure_interface(command)
         elif command.lower() == "logout" or command == "3":
             print("\nLogout successful!\n")
-            login()
+            break
         elif command.lower() == "exit" or command == "4":
             print("Exiting the system.")
+            sys_running = False
             break
         elif len(command) == 0:
             print("\nNo command was typed, please type a command.")
@@ -155,9 +157,11 @@ def login():
 
 def main():
     try:
-        login()
+        while sys_running:
+            login()
     except KeyboardInterrupt:
                 print("\nProgram interrupted by user. Exiting the system.")
 
+sys_running = True
 if __name__ == "__main__":
     main()
