@@ -15,6 +15,6 @@ Feature: User Login
 
     Scenario: Unsuccessful login with incorrect credentials
         Given the user is on the login screen
-        When enter a username and password that are not in the file "logins.txt"
+        When enter a username and password that are not in the file "mock_logins.txt"
         Then the user should see "Incorrect login credentials, please try again!"
         And remain on the login screen
